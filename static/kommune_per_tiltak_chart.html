@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <canvas id="tiltak-per-kommune"></canvas>
+
+  <script>
+    async function render() {
+      const response = await fetch('/api/tiltak-per-kommune');
+      const data = await response.json();
+
+      new Chart(document.getElementById('chart'), {
+        type: data.type,
+        data: {
+          labels: data.labels,
+          datasets: data.datasets,
+        }
+      });
+    }
+    render();
+  </script>
+</body>
+</html>
