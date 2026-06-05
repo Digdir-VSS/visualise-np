@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from typing import Any
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
@@ -29,24 +29,30 @@ app = FastAPI()
 
 @app.get("/api/tiltak-per-kommune", response_model=ChartResponse)
 def get_tiltak_per_kommune():
-    tiltak = db_client.get_all_tiltak()
-    virksomheter = db_client.get_all_virksomheter()
+    try:
+        tiltak = db_client.get_all_tiltak()
+        virksomheter = db_client.get_all_virksomheter()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="Kunne ikke hente data fra databasen")
 
-    kommune_lookup = {
-        v.organisasjonsnummer: v.kommune or "Ukjent"
-        for v in virksomheter
-    }
+    try:
+        kommune_lookup = {
+            v.organisasjonsnummer: v.kommune or "Ukjent"
+            for v in virksomheter
+        }
 
-    counts = {}
-    for t in tiltak:
-        kommune = kommune_lookup.get(t.virksomhet_organisasjonsnummer, "Ukjent")
-        counts[kommune] = counts.get(kommune, 0) + 1
+        counts = {}
+        for t in tiltak:
+            kommune = kommune_lookup.get(t.virksomhet_organisasjonsnummer, "Ukjent")
+            counts[kommune] = counts.get(kommune, 0) + 1
 
-    return ChartResponse(
-        type="bar",
-        labels=list(counts.keys()),
-        datasets=[{"label": "Antall tiltak", "data": list(counts.values())}]
-    )
+        return ChartResponse(
+            type="bar",
+            labels=list(counts.keys()),
+            datasets=[Dataset(label="Antall tiltak", data=list(counts.values()))]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Feil ved behandling av data")
 
 @app.get("/charts/tiltak-per-kommune", response_class=HTMLResponse)
 def chart_virksomheter():
